@@ -1,0 +1,730 @@
+{% load static %}
+<!doctype html>
+<html>
+  <head>
+    <title>Filter Result</title>
+    <link rel="stylesheet" href="{% static 'filters/result.css' %}" />
+
+    <style>
+      .history {
+        margin-top: 40px;
+      }
+
+      .history-strip {
+        display: flex;
+        gap: 15px;
+        overflow-x: auto;
+        padding: 10px;
+      }
+
+      .thumb {
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .thumb img {
+        height: 80px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+      }
+
+      .thumb img:hover {
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Filter Applied Successfully!</h1>
+
+      <div class="filter-info">
+        <h2>Applied Filter: {{ filter_name }}</h2>
+        <p>Kernel Size: {{ kernel_size }}</p>
+      </div>
+
+      <div class="image-comparison">
+        <div class="image-box">
+          <h3>Original Image</h3>
+          <img src="{{ original_image }}" alt="Original" />
+        </div>
+
+        <div class="image-box">
+          <h3>Processed Image</h3>
+          <img src="{{ processed_image }}" alt="Processed" />
+        </div>
+      </div>
+      <div class="history">
+        <h2 style="color: #ccc">Filter History</h2>
+
+        <div class="history-strip">
+          {% for img in history %}
+          <div class="thumb">
+            <img src="{{ img }}" alt="Step {{ forloop.counter }}" />
+            <span style="color: #ccc">Step {{ forloop.counter0 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <!-- ---------- REAL DJANGO FIELD (HIDDEN) ---------- -->
+      <div style="display: none">{{ form.filter_choice }}</div>
+      <form
+        method="post"
+        enctype="multipart/form-data"
+        action="{% url 'upload_image' %}"
+      >
+        {% csrf_token %}
+        <!-- ================= MODAL (INSIDE FORM) ================= -->
+        <div id="filter-modal" class="modal">
+          <div class="modal-content">
+            <h2>Select Filter Options</h2>
+
+            <div class="tab-buttons">
+              <button type="button" id="filters-tab" class="tab-btn active">
+                Filters
+              </button>
+              <button type="button" id="options-tab" class="tab-btn">
+                Options
+              </button>
+            </div>
+
+            <!-- ---------- FILTERS TAB ---------- -->
+            <div id="filters-page" class="tab-page">
+              <div class="filter-buttons">
+                {% for value, label in form.filter_choice.field.choices %}
+                <button
+                  type="button"
+                  class="filter-btn"
+                  data-value="{{ value }}"
+                >
+                  {{ label }}
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- ---------- OPTIONS TAB ---------- -->
+            <div id="options-page" class="tab-page" style="display: none">
+              <div class="form-group">
+                <label for="id_kernel_size" style="color: aliceblue"
+                  >Kernel Size:</label
+                >
+                {{ form.kernel_size }}
+              </div>
+
+              <!-- فیلدهای نویز -->
+              <div
+                class="form-group noise-option"
+                id="noise-sigma-group"
+                style="display: none"
+              >
+                <label for="id_noise_sigma" style="color: aliceblue"
+                  >Gaussian Sigma:</label
+                >
+                {{ form.noise_sigma }}
+              </div>
+
+              <div
+                class="form-group noise-option"
+                id="noise-amount-group"
+                style="display: none"
+              >
+                <label for="id_noise_amount" style="color: aliceblue"
+                  >Salt & Pepper Amount:</label
+                >
+                {{ form.noise_amount }}
+              </div>
+
+              <div
+                class="form-group noise-option"
+                id="noise-amplitude-group"
+                style="display: none"
+              >
+                <label for="id_noise_amplitude" style="color: aliceblue"
+                  >Periodic Amplitude:</label
+                >
+                {{ form.noise_amplitude }}
+              </div>
+
+              <div
+                class="form-group noise-option"
+                id="noise-frequency-group"
+                style="display: none"
+              >
+                <label for="id_noise_frequency" style="color: aliceblue"
+                  >Periodic Frequency:</label
+                >
+                {{ form.noise_frequency }}
+              </div>
+
+              <div class="form-group">
+                <label for="id_custom_kernel" style="color: aliceblue"
+                  >Custom Kernel (optional):</label
+                >
+                {{ form.custom_kernel }}
+              </div>
+
+              <div class="form-group">
+                <label class="continue-filtering">
+                  Continue filtering with current result {{
+                  form.continue_filtering }}
+                </label>
+              </div>
+              <!-- فیلد جدید برای D0 - مخصوص نویزهای گوسی فیلتر شده -->
+              <div
+                class="form-group noise-option"
+                id="noise-d0-group"
+                style="display: none"
+              >
+                <label for="id_noise_d0" style="color: aliceblue"
+                  >Cutoff Frequency (D0):</label
+                >
+                {{ form.noise_d0 }}
+                <small
+                  class="help-text"
+                  style="
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 12px;
+                    color: #666;
+                  "
+                >
+                  Lower = stronger filtering, Higher = weaker filtering
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="id_custom_kernel" style="color: aliceblue"
+                  >Custom Kernel (optional):</label
+                >
+                {{ form.custom_kernel }}
+              </div>
+              <div class="form-group">
+                <label class="continue-filtering" style="color: aliceblue">
+                  Continue filtering with current result {{
+                  form.continue_filtering }}
+                </label>
+              </div>
+              <!-- فیلد جدید برای Notch Width -->
+              <div
+                class="form-group noise-option"
+                id="noise-notch-width-group"
+                style="display: none"
+              >
+                <label for="id_notch_width" style="color: aliceblue"
+                  >Notch Width:</label
+                >
+                {{ form.notch_width }}
+                <small
+                  class="help-text"
+                  style="
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 12px;
+                    color: #666;
+                  "
+                >
+                  Width of frequency band to remove (higher = wider notch)
+                </small>
+              </div>
+              <!-- فیلد Butterworth Order (جدید) - با id صحیح -->
+              <div
+                class="form-group noise-option"
+                id="butterworth-order-group"
+                style="display: none"
+              >
+                <label for="id_butterworth_order" style="color: aliceblue"
+                  >Butterworth Order (n):</label
+                >
+                <input
+                  type="number"
+                  name="butterworth_order"
+                  id="id_butterworth_order"
+                  value="{% if form.butterworth_order.value %}{{ form.butterworth_order.value }}{% else %}2{% endif %}"
+                  min="1"
+                  max="10"
+                  step="1"
+                  class="form-control"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border-radius: 4px;
+                    border: 1px solid #555;
+                    background: #2a2a2a;
+                    color: white;
+                  "
+                />
+                <small
+                  class="help-text"
+                  style="
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 12px;
+                    color: #888;
+                  "
+                >
+                  Higher n = sharper transition (1=soft, 10=ideal)
+                </small>
+              </div>
+            </div>
+            <!-- انتهای بخش options-page -->
+
+            <button type="button" id="close-modal" class="close-btn">
+              Apply & Close
+            </button>
+          </div>
+        </div>
+        <!-- ================= MODAL END ================= -->
+      </form>
+
+      <div class="actions" style="height: 60px">
+        <a
+          href="{% url 'upload_image' %}"
+          class="btn new-image"
+          style="
+            width: 200px;
+            padding: 8px 15px;
+            margin-top: 20px;
+            text-align: center;
+          "
+          >Upload New Image</a
+        >
+        <a
+          href="{% url 'reset_filtering' %}"
+          class="btn reset"
+          style="width: 200px; padding: 8px 15px; margin-top: 20px"
+          >Redo One step</a
+        >
+        <button
+          type="button"
+          id="select-filter-btn"
+          class="select-filter-btn"
+          style="width: 200px; padding: 8px 15px; margin-top: 20px"
+        >
+          Select Next Filter
+        </button>
+      </div>
+    </div>
+
+    <script>
+      /* ---------- Modal ---------- */
+      const modal = document.getElementById("filter-modal");
+      const selectFilterBtn = document.getElementById("select-filter-btn");
+      const closeModalBtn = document.getElementById("close-modal");
+
+      // باز کردن مودال
+      if (selectFilterBtn) {
+        selectFilterBtn.onclick = () => {
+          if (modal) modal.style.display = "flex";
+        };
+      }
+
+      // بستن مودال و ارسال فرم
+      if (closeModalBtn) {
+        closeModalBtn.onclick = function (e) {
+          e.preventDefault();
+
+          // 1. بستن مودال
+          if (modal) modal.style.display = "none";
+
+          // 2. پیدا کردن فرم
+          const form = document.querySelector("form");
+          if (form) {
+            // 3. بررسی اینکه فیلتری انتخاب شده
+            const realSelect = document.getElementById("real-filter-choice");
+            if (!realSelect || !realSelect.value) {
+              alert("لطفاً یک فیلتر انتخاب کنید");
+              return;
+            }
+
+            // 4. ذخیره مقادیر نویز در localStorage
+            saveNoiseValues();
+
+            // 5. ارسال فرم
+            form.submit();
+          }
+        };
+      }
+
+      // ذخیره مقادیر نویز
+      function saveNoiseValues() {
+        const sigmaInput = document.getElementById("id_noise_sigma");
+        if (sigmaInput) {
+          localStorage.setItem("noiseSigma", sigmaInput.value);
+        }
+
+        const d0Input = document.getElementById("id_noise_d0");
+        if (d0Input) {
+          localStorage.setItem("noiseD0", d0Input.value);
+        }
+
+        const notchWidthInput = document.getElementById("id_notch_width");
+        if (notchWidthInput) {
+          localStorage.setItem("notchWidth", notchWidthInput.value);
+        }
+
+        const amountInput = document.getElementById("id_noise_amount");
+        if (amountInput) {
+          localStorage.setItem("noiseAmount", amountInput.value);
+        }
+
+        const ampInput = document.getElementById("id_noise_amplitude");
+        if (ampInput) {
+          localStorage.setItem("noiseAmplitude", ampInput.value);
+        }
+
+        const freqInput = document.getElementById("id_noise_frequency");
+        if (freqInput) {
+          localStorage.setItem("noiseFrequency", freqInput.value);
+        }
+
+        // ذخیره برای butterworth_order
+        const butterworthInput = document.getElementById(
+          "id_butterworth_order",
+        );
+        if (butterworthInput) {
+          localStorage.setItem("butterworthOrder", butterworthInput.value);
+        }
+      }
+
+      /* ---------- Tabs ---------- */
+      const filtersTab = document.getElementById("filters-tab");
+      const optionsTab = document.getElementById("options-tab");
+      const filtersPage = document.getElementById("filters-page");
+      const optionsPage = document.getElementById("options-page");
+
+      if (filtersTab && optionsTab) {
+        filtersTab.onclick = () => {
+          if (filtersPage) filtersPage.style.display = "block";
+          if (optionsPage) optionsPage.style.display = "none";
+          filtersTab.classList.add("active");
+          optionsTab.classList.remove("active");
+        };
+
+        optionsTab.onclick = () => {
+          if (filtersPage) filtersPage.style.display = "none";
+          if (optionsPage) optionsPage.style.display = "block";
+          optionsTab.classList.add("active");
+          filtersTab.classList.remove("active");
+        };
+      }
+
+      /* ---------- Hide All Noise Options ---------- */
+      function hideAllNoiseOptions() {
+        const noiseGroups = document.querySelectorAll(".noise-option");
+        noiseGroups.forEach((group) => {
+          group.style.display = "none";
+          const input = group.querySelector("input, select, textarea");
+          if (input) {
+            input.disabled = true;
+          }
+        });
+      }
+
+      /* ---------- Show Noise Options Based on Filter ---------- */
+      function showNoiseOptions(filterValue) {
+        hideAllNoiseOptions();
+
+        // نویز گوسی معمولی
+        if (filterValue === "noise_gaussian") {
+          const group = document.getElementById("noise-sigma-group");
+          if (group) {
+            group.style.display = "block";
+            const input = group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+        }
+        // نویز نمک و فلفل
+        else if (filterValue === "noise_sp") {
+          const group = document.getElementById("noise-amount-group");
+          if (group) {
+            group.style.display = "block";
+            const input = group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+        }
+        // نویز پریودیک
+        else if (filterValue === "noise_periodic") {
+          const ampGroup = document.getElementById("noise-amplitude-group");
+          const freqGroup = document.getElementById("noise-frequency-group");
+
+          if (ampGroup) {
+            ampGroup.style.display = "block";
+            const input = ampGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (freqGroup) {
+            freqGroup.style.display = "block";
+            const input = freqGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+        }
+        // سه نوع نویز گوسی جدید (Low-Pass, High-Pass, Band-Pass)
+        else if (
+          [
+            "noise_gaussian_lowpass",
+            "noise_gaussian_highpass",
+            "noise_gaussian_bandpass",
+          ].includes(filterValue)
+        ) {
+          const sigmaGroup = document.getElementById("noise-sigma-group");
+          const d0Group = document.getElementById("noise-d0-group");
+
+          if (sigmaGroup) {
+            sigmaGroup.style.display = "block";
+            const input = sigmaGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (d0Group) {
+            d0Group.style.display = "block";
+            const input = d0Group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+        }
+        // فیلتر ناچ گوسی
+        else if (filterValue === "noise_gaussian_notch") {
+          const sigmaGroup = document.getElementById("noise-sigma-group");
+          const d0Group = document.getElementById("noise-d0-group");
+          const notchGroup = document.getElementById("noise-notch-width-group");
+
+          if (sigmaGroup) {
+            sigmaGroup.style.display = "block";
+            const input = sigmaGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (d0Group) {
+            d0Group.style.display = "block";
+            const input = d0Group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (notchGroup) {
+            notchGroup.style.display = "block";
+            const input = notchGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+        }
+        // فیلترهای باترورث
+        else if (
+          [
+            "butterworth_noise_lowpass",
+            "butterworth_noise_highpass",
+            "butterworth_noise_bandpass",
+            "butterworth_noise_notch",
+          ].includes(filterValue)
+        ) {
+          const sigmaGroup = document.getElementById("noise-sigma-group");
+          const d0Group = document.getElementById("noise-d0-group");
+          const butterworthGroup = document.getElementById(
+            "butterworth-order-group",
+          );
+
+          if (sigmaGroup) {
+            sigmaGroup.style.display = "block";
+            const input = sigmaGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (d0Group) {
+            d0Group.style.display = "block";
+            const input = d0Group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (butterworthGroup) {
+            butterworthGroup.style.display = "block";
+            const input = butterworthGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          if (filterValue === "butterworth_noise_notch") {
+            const notchGroup = document.getElementById(
+              "noise-notch-width-group",
+            );
+            if (notchGroup) {
+              notchGroup.style.display = "block";
+              const input = notchGroup.querySelector("input");
+              if (input) input.disabled = false;
+            }
+          }
+        }
+        // ==================== اضافه کردن فیلترهای ایده‌ال ====================
+        else if (
+          [
+            "ideal_noise_lowpass",
+            "ideal_noise_highpass",
+            "ideal_noise_bandpass",
+            "ideal_noise_notch",
+          ].includes(filterValue)
+        ) {
+          const sigmaGroup = document.getElementById("noise-sigma-group");
+          const d0Group = document.getElementById("noise-d0-group");
+
+          // نمایش فیلد sigma
+          if (sigmaGroup) {
+            sigmaGroup.style.display = "block";
+            const input = sigmaGroup.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          // نمایش فیلد d0
+          if (d0Group) {
+            d0Group.style.display = "block";
+            const input = d0Group.querySelector("input");
+            if (input) input.disabled = false;
+          }
+
+          // اگر فیلتر ناچ باشد، notch_width را هم نمایش بده
+          if (filterValue === "ideal_noise_notch") {
+            const notchGroup = document.getElementById(
+              "noise-notch-width-group",
+            );
+            if (notchGroup) {
+              notchGroup.style.display = "block";
+              const input = notchGroup.querySelector("input");
+              if (input) input.disabled = false;
+            }
+          }
+        }
+        // ==================== پایان اضافه کردن فیلترهای ایده‌ال ====================
+      }
+
+      /* ---------- Filter Selection ---------- */
+      const realSelect = document.getElementById("real-filter-choice");
+      const filterBtns = document.querySelectorAll(".filter-btn");
+
+      // تنظیم اولیه
+      if (realSelect) {
+        // بازیابی مقدار از localStorage
+        const savedFilter = localStorage.getItem("selectedFilter");
+        if (savedFilter) {
+          realSelect.value = savedFilter;
+          showNoiseOptions(savedFilter);
+
+          filterBtns.forEach((btn) => {
+            if (btn.dataset.value === savedFilter) {
+              btn.classList.add("selected");
+            }
+          });
+        } else {
+          showNoiseOptions(realSelect.value);
+          filterBtns.forEach((btn) => {
+            if (btn.dataset.value === realSelect.value) {
+              btn.classList.add("selected");
+            }
+          });
+        }
+      }
+
+      // مدیریت کلیک روی دکمه‌های فیلتر
+      filterBtns.forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const value = this.dataset.value;
+
+          // ۱. مقداردهی فیلد مخفی
+          if (realSelect) {
+            realSelect.value = value;
+            localStorage.setItem("selectedFilter", value);
+          }
+
+          // ۲. تغییر کلاس استایل
+          filterBtns.forEach((b) => b.classList.remove("selected"));
+          this.classList.add("selected");
+
+          // ۳. نمایش گزینه‌های نویز
+          showNoiseOptions(value);
+        });
+      });
+
+      /* ---------- بستن مودال با کلیک خارج ---------- */
+      window.addEventListener("click", (event) => {
+        if (modal && event.target === modal) {
+          modal.style.display = "none";
+        }
+      });
+
+      /* ---------- بستن مودال با کلید ESC ---------- */
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && modal && modal.style.display === "flex") {
+          modal.style.display = "none";
+        }
+      });
+
+      /* ---------- Prevent Empty Submit ---------- */
+      document.querySelector("form")?.addEventListener("submit", function (e) {
+        if (!realSelect || !realSelect.value) {
+          e.preventDefault();
+          alert("لطفاً یک فیلتر انتخاب کنید");
+          return false;
+        }
+      });
+
+      /* ---------- بازیابی مقادیر ذخیره شده ---------- */
+      document.addEventListener("DOMContentLoaded", function () {
+        // بازیابی مقدار فیلتر
+        const savedFilter = localStorage.getItem("selectedFilter");
+        if (savedFilter && realSelect) {
+          realSelect.value = savedFilter;
+          showNoiseOptions(savedFilter);
+
+          filterBtns.forEach((btn) => {
+            if (btn.dataset.value === savedFilter) {
+              btn.classList.add("selected");
+            }
+          });
+        }
+
+        // بازیابی مقادیر نویز
+        const savedSigma = localStorage.getItem("noiseSigma");
+        if (savedSigma) {
+          const sigmaInput = document.getElementById("id_noise_sigma");
+          if (sigmaInput) sigmaInput.value = savedSigma;
+        }
+
+        const savedD0 = localStorage.getItem("noiseD0");
+        if (savedD0) {
+          const d0Input = document.getElementById("id_noise_d0");
+          if (d0Input) d0Input.value = savedD0;
+        }
+
+        const savedNotchWidth = localStorage.getItem("notchWidth");
+        if (savedNotchWidth) {
+          const notchInput = document.getElementById("id_notch_width");
+          if (notchInput) notchInput.value = savedNotchWidth;
+        }
+
+        const savedAmount = localStorage.getItem("noiseAmount");
+        if (savedAmount) {
+          const amountInput = document.getElementById("id_noise_amount");
+          if (amountInput) amountInput.value = savedAmount;
+        }
+
+        const savedAmp = localStorage.getItem("noiseAmplitude");
+        if (savedAmp) {
+          const ampInput = document.getElementById("id_noise_amplitude");
+          if (ampInput) ampInput.value = savedAmp;
+        }
+
+        const savedFreq = localStorage.getItem("noiseFrequency");
+        if (savedFreq) {
+          const freqInput = document.getElementById("id_noise_frequency");
+          if (freqInput) freqInput.value = savedFreq;
+        }
+
+        // بازیابی مقدار butterworth_order
+        const savedButterworth = localStorage.getItem("butterworthOrder");
+        if (savedButterworth) {
+          const butterworthInput = document.getElementById(
+            "id_butterworth_order",
+          );
+          if (butterworthInput) butterworthInput.value = savedButterworth;
+        }
+
+        console.log("✅ All noise options loaded successfully");
+      });
+    </script>
+  </body>
+</html>
